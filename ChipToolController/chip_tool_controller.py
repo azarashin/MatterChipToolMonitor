@@ -11,6 +11,8 @@ class ChipToolController:
     self._pattern_command_response = r'Received Command Response Data, Endpoint=(.*) Cluster=0x(.*) Command=0x(.*)'
     self._pattern_command_response_status = r'Received Command Response Status for Endpoint=(.*) Cluster=0x(.*) Command=0x(.*) Status=0x(.*)'
     self._pattern_timeout = r'CHIP:TOO: Run command failure:.*CHIP Error 0x00000032: Timeout'
+    self._pattern_vend_prod = r'CHIP:SVR: OnReadCommissioningInfo - vendorId=0x(.*) productId=0x(.*)'
+    self._pattern_step = r'CHIP:CTL: Performing next commissioning step \'(.*)\''
 
   def add_important_log(self, line):
     self._important_log.append(line)
@@ -19,7 +21,15 @@ class ChipToolController:
     return self._important_log
 
   def get_attrib_in_find(self, line):
-    m = re.search(self._pattern_wifi, line)
+    m = re.search(self._pattern_step, line)
+    if m:
+      return 'step', m.group(1), True
+
+    m = re.search(self._pattern_vend_prod, line)
+    if m:
+      return 'vend_prod', {'vender_id': m.group(1), 'product_id': m.group(2)}, False
+
+    m = re.search(self._pattern_timeout, line)
     if m:
       return 'timeout', True, False
 
@@ -47,14 +57,16 @@ class ChipToolController:
   def find(self, node_id, pin_code, discriminator):
     result = {
       'success': False, 
-      'raw': '', 
       'wifi': '', 
       'mac': '', 
       'command_response': [], 
       'command_response_status': [], 
+      'vend_prod': None, 
+      'step': [],
       'timeout': False, 
       'error': ''
     } 
+    raw = ''
     try:
         commands = [
           f'chip-tool', f'pairing', f'ble-wifi', f'{node_id}', f'{self._env.wifi_ssid}' , f'{self._env.wifi_pass}', 
@@ -66,11 +78,11 @@ class ChipToolController:
         line = '#'
         while line != '':
             line = pipe.stdout.readline()
-            result['raw'] += line
+            raw += line
             if 'CHIP:SPT: VerifyOrDie failure' in line:
                 result['success'] = False
                 result['error'] = 'CHIP:SPT: VerifyOrDie failure' # Maybe this script should run as sudo. 
-                return result
+                return result, None
             attrib, value, additional = self.get_attrib_in_find(line)
             if attrib:
                 if additional:
@@ -82,24 +94,25 @@ class ChipToolController:
             if line != '':
                 print(line, end='')
         print(f'returncode: {pipe.returncode}')
-        if pipe.returncode == 0:
+        if result['mac'] != '':
             result['success'] = True
-            return result
+            self._env.add_device(result)
+            return result, raw
         else:
             result['success'] = False
             result['error'] = pipe.stderr
-            return result
+            return result, raw
     except Exception as e:
         result['success'] = False
         result['error'] = str(e)
-        return result
+        return result, raw
     
 
 
 if __name__ == '__main__':
   ct = ChipToolController()
-  ret = ct.find(1234, 20202021, 3840)
-  ret['raw'] = 'dummy'
+  ret, raw = ct.find(1234, 20202021, 3840)
+  print(raw)
   print(ret)
-  print(ct.self._important_log())
+  print(ct.get_important_log())
 
