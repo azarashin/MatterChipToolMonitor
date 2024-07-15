@@ -10,12 +10,15 @@ class DeviceType:
 #        path = os.path.join(self._env.path_to_connectedhomeip, 'data_model/1.3/clusters')
         path = os.path.join(self._env.path_to_connectedhomeip, 'data_model/1.3/device_types')
         print(path)
+        self.device_types = []
         files = os.listdir(path)
         for file in files:
             if file[-4:] == '.xml':
                 print(os.path.join(path, file))
                 json_data = self.load_xml_to_json(os.path.join(path, file))
-                print(json.dumps(json_data, indent=4, ensure_ascii=False))
+                self.device_types.append(json_data)
+                if json_data['id'] is not None and json_data['id'] != '':
+                    print(json.dumps(json_data, indent=4, ensure_ascii=False))
     except FileNotFoundError:
         print(f"The directory '{path}' or '{file}' does not exist.")
     except PermissionError:
