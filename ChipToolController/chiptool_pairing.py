@@ -1,10 +1,13 @@
 from environment import Environment
 import subprocess
 import re
+import json
+from cluster import Cluster
 
-class ChipToolController:
+class ChipToolPairing:
   def __init__(self):
     self._env = Environment()
+    self._cluster = Cluster()
     self._important_log = []
     self._pattern_wifi = r'CHIP:DL: Found the primary WiFi interface:(.*)'
     self._pattern_mac = r'CHIP:BLE: New device connected: (.*)'
@@ -43,12 +46,14 @@ class ChipToolController:
 
     m = re.search(self._pattern_command_response, line)
     if m:
-      ret = {'end_point':m.group(1), 'cluster':m.group(2).replace('_', ''), 'command':m.group(3).replace('_', '')}
+      ret = {'end_point':m.group(1), 'cluster_id':m.group(2).replace('_', ''), 'command':m.group(3).replace('_', '')}
+      ret['cluster_name'] = self._cluster.get_name(ret['cluster_id'])
       return 'command_response', ret, True
 
     m = re.search(self._pattern_command_response_status, line)
     if m:
-      ret = {'end_point':m.group(1), 'cluster':m.group(2).replace('_', ''), 'command':m.group(3).replace('_', ''), 'status':m.group(4).replace('_', '')}
+      ret = {'end_point':m.group(1), 'cluster_id':m.group(2).replace('_', ''), 'command':m.group(3).replace('_', ''), 'status':m.group(4).replace('_', '')}
+      ret['cluster_name'] = self._cluster.get_name(ret['cluster_id'])
       return 'command_response_status', ret, True
 
     return None, None, False
@@ -110,9 +115,9 @@ class ChipToolController:
 
 
 if __name__ == '__main__':
-  ct = ChipToolController()
+  ct = ChipToolPairing()
   ret, raw = ct.find(1234, 20202021, 3840)
   print(raw)
-  print(ret)
+  print(json.dumps(ret, indent=4, ensure_ascii=False))
   print(ct.get_important_log())
 
