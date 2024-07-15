@@ -9,17 +9,27 @@ class Cluster:
     try:
         path = os.path.join(self._env.path_to_connectedhomeip, 'data_model/1.3/clusters')
         print(path)
+        self.clusters = []
         files = os.listdir(path)
         for file in files:
             if file[-4:] == '.xml':
-                print(os.path.join(path, file))
+#                print(os.path.join(path, file))
                 json_data = self.load_xml_to_json(os.path.join(path, file))
-                print(json.dumps(json_data, indent=4, ensure_ascii=False))
-        self.json_data = json_data
+#                print(json.dumps(json_data, indent=4, ensure_ascii=False))
+            if json_data['id'] is not None and json_data['id'] != '':
+                self.clusters.append(json_data)
     except FileNotFoundError:
         print(f"The directory '{path}' or '{file}' does not exist.")
     except PermissionError:
         print(f"Permission denied to access the directory '{directory}'.")
+
+  def get_name(self, id):
+#    for t in self.clusters:
+#      print((t['id'], id, t['name']))
+    targets = [d for d in self.clusters if int(d['id'][2:], 16) == int(id, 16)]
+    if len(targets) > 0:
+      return targets[0]['name']
+    return None
 
   def load_xml_to_json(self, path):
     tree = ET.parse(path)
