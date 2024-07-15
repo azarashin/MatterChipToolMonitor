@@ -5,7 +5,7 @@ import json
 from cluster import Cluster
 from command_executor import CommandExecutor
 
-class ChipToolDeviceList:
+class ChipToolEndpointList:
   def __init__(self, env, executor):
     self._env = env
     self._executor = executor
@@ -95,7 +95,7 @@ class ChipToolDeviceList:
 if __name__ == '__main__':
   env = Environment()
   executor = CommandExecutor()
-  ct = ChipToolDeviceList(env, executor)
+  ct = ChipToolEndpointList(env, executor)
   ret, raw = ct.get_list(1234)
   print(ret)
   print(json.dumps(ret, indent=4, ensure_ascii=False))

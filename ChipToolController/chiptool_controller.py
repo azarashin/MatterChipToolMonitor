@@ -1,7 +1,7 @@
 from environment import Environment
 from command_executor import CommandExecutor
 from chiptool_pairing import ChipToolPairing
-from chiptool_device_list import ChipToolDeviceList
+from chiptool_endpoint_list import ChipToolEndpointList
 
 import getpass
 
@@ -10,7 +10,7 @@ class ChipToolController:
     self._env = Environment()
     self._executor = CommandExecutor()
     self._pairing = ChipToolPairing(self._env, self._executor)
-    self._device_list = ChipToolDeviceList(self._env, self._executor)
+    self._endpoint_list = ChipToolEndpointList(self._env, self._executor)
 
   def get_node_id(self):
     id = input('input NodeID:')
@@ -31,7 +31,7 @@ class ChipToolController:
 
   def show_device_list(self):
     node_id = self.get_node_id()
-    self._device_list.get_list(node_id)
+    self._endpoint_list.get_list(node_id)
     print(self._env.get_device_info(node_id))
 
   def remove_all_devices(self):
