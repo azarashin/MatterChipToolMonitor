@@ -86,7 +86,7 @@ class ChipToolServerClusterList:
         print(f'returncode: {pipe.returncode}')
         if len(result['server_clusters']) > 0:
             result['success'] = True
-            self._env.set_server_cluster_list(node_id, result['server_clusters'])
+            self._env.set_server_cluster_list(node_id, endpoint_id, result['server_clusters'])
             return result, raw
         else:
             result['success'] = False

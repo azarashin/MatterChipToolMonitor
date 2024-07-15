@@ -26,7 +26,7 @@ class Cluster:
   def get_name(self, id):
 #    for t in self.clusters:
 #      print((t['id'], id, t['name']))
-    targets = [d for d in self.clusters if int(d['id'][2:], 16) == int(id, 16)]
+    targets = [d for d in self.clusters if d['id'] == int(id, 16)]
     if len(targets) > 0:
       return targets[0]['name']
     return None

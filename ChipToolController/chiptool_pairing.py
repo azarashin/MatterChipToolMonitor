@@ -86,6 +86,7 @@ class ChipToolPairing:
       'command_response_status': [], 
       'vend_prod': None, 
       'step': [],
+      'endpoints': [], 
       'timeout': False, 
       'discriminator': None, 
       'node_id': None, 
