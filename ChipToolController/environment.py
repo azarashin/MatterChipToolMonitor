@@ -48,7 +48,17 @@ class Environment:
     def set_endpoint_list(self, node_id, endpoints):
         for i in range(len(self.json_data['device_list'])):
             if self.json_data['device_list'][i].get('node_id') == node_id:
-                self.json_data['device_list'][i]['endpoints'] = endpoints
+                self.json_data['device_list'][i]['endpoints'] = [{'endpoint_id': d['endpoint_id'], 'index': d['index']} for d in endpoints]
+        self.json_string = json.dumps(self.json_data, sort_keys=True, indent=4)
+        open(self._path, 'w').write(self.json_string)
+
+    def set_device_type_list(self, node_id, endpoint_id, device_types):
+        for i in range(len(self.json_data['device_list'])):
+            if self.json_data['device_list'][i].get('node_id') == node_id:
+                for j in range(len(self.json_data['device_list'][i]['endpoints'])):
+                    if endpoint_id == self.json_data['device_list'][i]['endpoints'][j]['endpoint_id']:
+                        self.json_data['device_list'][i]['endpoints'][j]['device_types'] = device_types
+        self.json_string = json.dumps(self.json_data, sort_keys=True, indent=4)
         open(self._path, 'w').write(self.json_string)
 
     def get_device_info(self, node_id):

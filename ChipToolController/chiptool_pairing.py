@@ -128,7 +128,7 @@ class ChipToolPairing:
         print(f'returncode: {pipe.returncode}')
         if result['mac'] != '':
             result['success'] = True
-            result['node_id'] = node_id
+            result['node_id'] = int(node_id)
             result['discriminator'] = discriminator
             self._env.add_device(result)
             return result, raw

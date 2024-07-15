@@ -4,15 +4,19 @@ import re
 import json
 from cluster import Cluster
 from command_executor import CommandExecutor
+from device_type import DeviceType
 
-class ChipToolEndpointList:
-  def __init__(self, env, executor):
+class ChipToolDeviceList:
+  def __init__(self, env, executor, device_dic):
     self._env = env
     self._executor = executor
     self._cluster = Cluster()
     self._important_log = []
-    self._pattern_header_endpoints = r'CHIP:TOO:   PartsList: ([0-9]+) entries'
-    self._pattern_endpoint = r'CHIP:TOO: .*\[([0-9]+)\]: *([0-9]+)'
+    self._device_dic = device_dic
+    self._pattern_header_device_types = r'CHIP:TOO:.*DeviceTypeList: ([0-9]+) entries'
+    self._pattern_index = r'CHIP:TOO:.*\[([0-9]+)\]:'
+    self._pattern_id = r'CHIP:TOO:.*DeviceType: ([0-9]+)'
+    self._pattern_revision = r'CHIP:TOO:.*Revision: ([0-9]+)'
 
   def add_important_log(self, line):
     self._important_log.append(line)
@@ -22,32 +26,40 @@ class ChipToolEndpointList:
 
   def get_attrib_in_get_list(self, lines, index):
     line = lines[index]
-    m = re.search(self._pattern_header_endpoints, line)
-    endpoints = []
+    m = re.search(self._pattern_header_device_types, line)
+    device_types = []
     if m:
-      number_of_endpoints = int(m.group(1))
-      print(f'number_of_endpoints: {number_of_endpoints}')
-      for i in range(number_of_endpoints):
-        m2 = re.search(self._pattern_endpoint, lines[index + i + 1])
-        if m2:
-          endpoints.append({'index': int(m2.group(1)), 'endpoint_id': int(m2.group(2))})
+      number_of_device_types = int(m.group(1))
+      print(f'number_of_device_types: {number_of_device_types}')
+      for i in range(number_of_device_types):
+        m1 = re.search(self._pattern_index, lines[index + i * 4 + 1])
+        m2 = re.search(self._pattern_id, lines[index + i * 4 + 2])
+        m3 = re.search(self._pattern_revision, lines[index + i * 4 + 3])
+        if m1 and m2 and m3:
+          device_type_id = int(m2.group(1))
+          device = {
+            'index': int(m1.group(1)), 
+            'device_type_id': device_type_id, 
+            'revision': int(m3.group(1)), 
+            'device_name': self._device_dic.id_to_name(device_type_id)
+          }
+          device_types.append(device)
         else:
           return None, None, False
-      endpoints.append({'index': 0, 'endpoint_id': 0})
-      return 'endpoints', endpoints, False
+      return 'device_types', device_types, False
     return None, None, False
 
 
-  def get_list(self, node_id):
+  def get_list(self, node_id, endpoint_id):
     result = {
       'success': False, 
-      'endpoints': [], 
+      'device_types': [], 
       'error': ''
     } 
     raw = ''
     try:
         commands = [
-          f'chip-tool', f'descriptor', f'read', f'parts-list', f'{node_id}', f'0'
+          f'chip-tool', f'descriptor', f'read', f'device-type-list', f'{node_id}', f'{endpoint_id}'
         ]
         pipe = self._executor.run(commands)
         result['success'] = False
@@ -79,9 +91,9 @@ class ChipToolEndpointList:
                 else:
                     result[attrib] = value
         print(f'returncode: {pipe.returncode}')
-        if len(result['endpoints']) > 0:
+        if len(result['device_types']) > 0:
             result['success'] = True
-            self._env.set_endpoint_list(node_id, result['endpoints'])
+            self._env.set_device_type_list(node_id, endpoint_id, result['device_types'])
             return result, raw
         else:
             result['success'] = False
@@ -96,8 +108,9 @@ class ChipToolEndpointList:
 if __name__ == '__main__':
   env = Environment()
   executor = CommandExecutor()
-  ct = ChipToolEndpointList(env, executor)
-  ret, raw = ct.get_list(1234)
+  dt = DeviceType()
+  ct = ChipToolDeviceList(env, executor, dt)
+  ret, raw = ct.get_list(1234, 1)
   print(ret)
   print(json.dumps(ret, indent=4, ensure_ascii=False))
   print(ct.get_important_log())

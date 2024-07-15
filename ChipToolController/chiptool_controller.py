@@ -2,6 +2,7 @@ from environment import Environment
 from command_executor import CommandExecutor
 from chiptool_pairing import ChipToolPairing
 from chiptool_endpoint_list import ChipToolEndpointList
+from device_type import DeviceType
 
 import getpass
 
@@ -9,8 +10,9 @@ class ChipToolController:
   def __init__(self):
     self._env = Environment()
     self._executor = CommandExecutor()
+    self._device_type_dic = DeviceType()
     self._pairing = ChipToolPairing(self._env, self._executor)
-    self._endpoint_list = ChipToolEndpointList(self._env, self._executor)
+    self._endpoint_list = ChipToolEndpointList(self._env, self._executor, self._device_type_dic)
 
   def get_node_id(self):
     id = input('input NodeID:')

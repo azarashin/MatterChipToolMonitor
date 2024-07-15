@@ -16,9 +16,10 @@ class DeviceType:
             if file[-4:] == '.xml':
                 print(os.path.join(path, file))
                 json_data = self.load_xml_to_json(os.path.join(path, file))
-                self.device_types.append(json_data)
-                if json_data['id'] is not None and json_data['id'] != '':
-                    print(json.dumps(json_data, indent=4, ensure_ascii=False))
+                if json_data:
+                    self.device_types.append(json_data)
+#                    if json_data['id'] is not None and json_data['id'] != '':
+#                        print(json.dumps(json_data, indent=4, ensure_ascii=False))
     except FileNotFoundError:
         print(f"The directory '{path}' or '{file}' does not exist.")
     except PermissionError:
@@ -27,8 +28,10 @@ class DeviceType:
   def load_xml_to_json(self, path):
     tree = ET.parse(path)
     root = tree.getroot()
+    if root.attrib['id'] == '':
+      return None
     data_type = {
-      'id': root.attrib['id'], 
+      'id': int(root.attrib['id'][2:], 16), 
       'name': root.attrib['name'], 
       'revision': root.attrib['revision'], 
       'classification': None, 
@@ -44,12 +47,18 @@ class DeviceType:
         for sub_child in child:
           if sub_child.tag == 'cluster': 
             cluster = {
-              'id': sub_child.attrib['id'],
+              'id': int(sub_child.attrib['id'][2:], 16),
               'name': sub_child.attrib['name'],
               'side': sub_child.attrib['side']
             }
             data_type['clusters'].append(cluster)
     return data_type
+
+  def id_to_name(self, id):
+    targets = [d for d in self.device_types if d['id'] == id]
+    if len(targets) > 0:
+      return targets[0]['name']
+    return None
 
 if __name__ == '__main__':
   dt = DeviceType()
