@@ -5,8 +5,8 @@ import json
 from cluster import Cluster
 
 class ChipToolPairing:
-  def __init__(self):
-    self._env = Environment()
+  def __init__(self, env):
+    self._env = env
     self._cluster = Cluster()
     self._important_log = []
     self._pattern_wifi = r'CHIP:DL: Found the primary WiFi interface:(.*)'
@@ -115,7 +115,8 @@ class ChipToolPairing:
 
 
 if __name__ == '__main__':
-  ct = ChipToolPairing()
+  env = Environment()
+  ct = ChipToolPairing(env)
   ret, raw = ct.find(1234, 20202021, 3840)
   print(raw)
   print(json.dumps(ret, indent=4, ensure_ascii=False))
