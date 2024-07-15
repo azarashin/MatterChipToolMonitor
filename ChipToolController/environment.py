@@ -70,11 +70,27 @@ class Environment:
         self.json_string = json.dumps(self.json_data, sort_keys=True, indent=4)
         open(self._path, 'w').write(self.json_string)
 
+    def set_client_cluster_list(self, node_id, endpoint_id, client_clusters):
+        for i in range(len(self.json_data['device_list'])):
+            if self.json_data['device_list'][i].get('node_id') == node_id:
+                for j in range(len(self.json_data['device_list'][i]['endpoints'])):
+                    if endpoint_id == self.json_data['device_list'][i]['endpoints'][j]['endpoint_id']:
+                        self.json_data['device_list'][i]['endpoints'][j]['client_clusters'] = client_clusters
+        self.json_string = json.dumps(self.json_data, sort_keys=True, indent=4)
+        open(self._path, 'w').write(self.json_string)
+
     def get_device_info(self, node_id):
         for i in range(len(self.json_data['device_list'])):
             if self.json_data['device_list'][i].get('node_id') == node_id:
                 return json.dumps(self.json_data['device_list'][i], sort_keys=True, indent=4)
         return None
+
+    def get_endpoint_id_list(self, node_id):
+        for i in range(len(self.json_data['device_list'])):
+            if self.json_data['device_list'][i].get('node_id') == node_id:
+                node = self.json_data['device_list'][i]
+                return [d['endpoint_id'] for d in node['endpoints']]
+        return []
 
     def datetime_str(self):
         dt = datetime.datetime.now()
