@@ -3,10 +3,12 @@ import subprocess
 import re
 import json
 from cluster import Cluster
+from command_executor import CommandExecutor
 
 class ChipToolPairing:
-  def __init__(self, env):
+  def __init__(self, env, executor):
     self._env = env
+    self._executor = executor
     self._cluster = Cluster()
     self._important_log = []
     self._pattern_wifi = r'CHIP:DL: Found the primary WiFi interface:(.*)'
@@ -16,6 +18,13 @@ class ChipToolPairing:
     self._pattern_timeout = r'CHIP:TOO: Run command failure:.*CHIP Error 0x00000032: Timeout'
     self._pattern_vend_prod = r'CHIP:SVR: OnReadCommissioningInfo - vendorId=0x(.*) productId=0x(.*)'
     self._pattern_step = r'CHIP:CTL: Performing next commissioning step \'(.*)\''
+    self._pattern_invalid_discriminator = r'CHIP:BLE: Skip connection: Device discriminator does not match: ([0-9A-Za-z]+) != ([0-9A-Za-z]+)'
+
+  def is_invalid_discriminator(self, line):
+    m = re.search(self._pattern_invalid_discriminator, line)
+    if m:
+      return m.group(1), m.group(2)
+    return None, None
 
   def add_important_log(self, line):
     self._important_log.append(line)
@@ -58,6 +67,15 @@ class ChipToolPairing:
 
     return None, None, False
 
+  def find_without_discriminator(self, node_id, pin_code):
+    result, raw = self.find(node_id, pin_code, '0000')
+    if result['success']:
+      return result, raw
+    discriminator = result['discriminator']
+    if discriminator:
+      result, raw = self.find(node_id, pin_code, discriminator)
+      return result, raw
+    return result, None
 
   def find(self, node_id, pin_code, discriminator):
     result = {
@@ -69,6 +87,8 @@ class ChipToolPairing:
       'vend_prod': None, 
       'step': [],
       'timeout': False, 
+      'discriminator': None, 
+      'node_id': None, 
       'error': ''
     } 
     raw = ''
@@ -77,8 +97,7 @@ class ChipToolPairing:
           f'chip-tool', f'pairing', f'ble-wifi', f'{node_id}', f'{self._env.wifi_ssid}' , f'{self._env.wifi_pass}', 
           f'{pin_code}' , f'{discriminator}'
         ]
-        print(commands)
-        pipe = subprocess.Popen(commands, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        pipe = self._executor.run(commands, [4, 5, 6, 7])
         result['success'] = False
         line = '#'
         while line != '':
@@ -88,6 +107,14 @@ class ChipToolPairing:
                 result['success'] = False
                 result['error'] = 'CHIP:SPT: VerifyOrDie failure' # Maybe this script should run as sudo. 
                 return result, None
+            correct_discriminator, actual_discriminator = self.is_invalid_discriminator(line)
+            if correct_discriminator and actual_discriminator:
+                result['success'] = False
+                result['error'] = f'Invalid Discriminator. Correct: {correct_discriminator}, Actual: {actual_discriminator}'
+                result['discriminator'] = correct_discriminator
+                return result, None
+
+
             attrib, value, additional = self.get_attrib_in_find(line)
             if attrib:
                 if additional:
@@ -101,6 +128,8 @@ class ChipToolPairing:
         print(f'returncode: {pipe.returncode}')
         if result['mac'] != '':
             result['success'] = True
+            result['node_id'] = node_id
+            result['discriminator'] = discriminator
             self._env.add_device(result)
             return result, raw
         else:
@@ -116,7 +145,8 @@ class ChipToolPairing:
 
 if __name__ == '__main__':
   env = Environment()
-  ct = ChipToolPairing(env)
+  executor = CommandExecutor()
+  ct = ChipToolPairing(env, executor)
   ret, raw = ct.find(1234, 20202021, 3840)
   print(raw)
   print(json.dumps(ret, indent=4, ensure_ascii=False))

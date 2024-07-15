@@ -30,14 +30,32 @@ class Environment:
     def __str__(self):
         return  self.json_string
 
+    def remove_all_devices(self):
+        self.json_data['device_list'] = []
+        self.json_string = json.dumps(self.json_data, sort_keys=True, indent=4)
+        open(self._path, 'w').write(self.json_string)
+
+
     def add_device(self, device):
-        if not 'mac' in device:
+        if not 'node_id' in device:
             print('FATAL: failed to add new device.')
             return False
-        self.json_data['device_list'] = [d for d in self.json_data['device_list'] if d.get('mac') != device['mac']]
+        self.json_data['device_list'] = [d for d in self.json_data['device_list'] if d.get('node_id') != device['node_id'] and d.get('mac') != device['mac']]
         self.json_data['device_list'].append(device)
         self.json_string = json.dumps(self.json_data, sort_keys=True, indent=4)
         open(self._path, 'w').write(self.json_string)
+
+    def set_endpoint_list(self, node_id, endpoints):
+        for i in range(len(self.json_data['device_list'])):
+            if self.json_data['device_list'][i].get('node_id') == node_id:
+                self.json_data['device_list'][i]['endpoints'] = endpoints
+        open(self._path, 'w').write(self.json_string)
+
+    def get_device_info(self, node_id):
+        for i in range(len(self.json_data['device_list'])):
+            if self.json_data['device_list'][i].get('node_id') == node_id:
+                return json.dumps(self.json_data['device_list'][i], sort_keys=True, indent=4)
+        return None
 
     def datetime_str(self):
         dt = datetime.datetime.now()
