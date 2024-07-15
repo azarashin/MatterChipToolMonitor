@@ -16,8 +16,8 @@ class Cluster:
 #                print(os.path.join(path, file))
                 json_data = self.load_xml_to_json(os.path.join(path, file))
 #                print(json.dumps(json_data, indent=4, ensure_ascii=False))
-            if json_data['id'] is not None and json_data['id'] != '':
-                self.clusters.append(json_data)
+                if json_data and json_data['id'] is not None and json_data['id'] != '':
+                    self.clusters.append(json_data)
     except FileNotFoundError:
         print(f"The directory '{path}' or '{file}' does not exist.")
     except PermissionError:
@@ -34,8 +34,11 @@ class Cluster:
   def load_xml_to_json(self, path):
     tree = ET.parse(path)
     root = tree.getroot()
+    id = root.attrib['id']
+    if id == '':
+      return None
     cluster = {
-      'id': root.attrib['id'], 
+      'id': int(id[2:], 16), 
       'name': root.attrib['name'], 
       'revision': root.attrib['revision'], 
       'classification': None, 
@@ -57,7 +60,7 @@ class Cluster:
         for sub_child in child:
           if sub_child.tag == 'clusterId': 
             cluster_element = {
-              'id': sub_child.attrib.get('id'),
+              'id': int(sub_child.attrib.get('id')[2:], 16),
               'name': sub_child.attrib.get('name'),
             }
             cluster['cluster_ids'].append(cluster_element)
@@ -84,6 +87,12 @@ class Cluster:
             cluster['events'].append(event)
 
     return cluster
+
+  def id_to_name(self, id):
+    targets = [d for d in self.clusters if d['id'] == id]
+    if len(targets) > 0:
+      return targets[0]['name']
+    return None
 
 if __name__ == '__main__':
   cluster = Cluster()
